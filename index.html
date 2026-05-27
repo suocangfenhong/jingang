@@ -549,6 +549,7 @@ async function loadOV(){
       <div class="info-row"><span>可推荐</span><span class="val">${i.canRefer?'✅':'❌'}</span></div>
     </div>`;
     const rs=document.getElementById('referralSection');
+    const bscLink=`<a href="https://bscscan.com/address/${A}#internaltx" target="_blank" style="display:block;margin-top:12px;color:var(--accent);text-decoration:none;font-size:12px;text-align:center">📋 链上记录 →</a>`;
     if(i.canRefer){
       rs.innerHTML=`<p style="font-size:13px;color:var(--muted);margin-bottom:10px">邀请好友质押，享一代二代各5%收益分红</p>
         <button class="btn" onclick="genInviteLink()">生成邀请链接</button>
@@ -557,9 +558,9 @@ async function loadOV(){
             <input type="text" id="inviteUrl" readonly style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-size:12px" />
             <button class="btn sm" onclick="copyInvite()">复制</button>
           </div>
-        </div>`;
+      </div>${bscLink}`;
     }else{
-      rs.innerHTML='<p style="font-size:13px;color:var(--muted)">未激活 — 质押≥1万金刚并锁仓7天即可获得邀请码</p>';
+      rs.innerHTML=`<p style="font-size:13px;color:var(--muted)">未激活 — 质押≥1万金刚并锁仓7天即可获得邀请码</p>${bscLink}`;
     }
   }catch(err){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadOV();return false" style="color:var(--accent)">重试</a></div>'}
 }
