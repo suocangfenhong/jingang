@@ -88,6 +88,8 @@
     .cd-sep{font-size:18px}
     .rule-item{flex-direction:column;gap:6px}
     .rule-num{width:24px;height:24px;font-size:11px}
+    .pct-row{gap:4px}
+    .pct-row .btn.sm{font-size:13px;padding:10px 0;height:40px;border-radius:10px}
   }
   .rules-list{display:flex;flex-direction:column;gap:0}
   .rule-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);align-items:flex-start}
@@ -95,6 +97,8 @@
   .rule-num{width:28px;height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;border-radius:50%;font-size:13px;font-weight:700}
   .rule-text strong{font-size:14px;color:var(--text);display:block;margin-bottom:2px}
   .rule-text p{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+  .pct-row{display:flex;gap:6px;margin-bottom:10px}
+  .pct-row .btn.sm{flex:1;text-align:center;min-width:0;font-size:13px;font-weight:700;padding:8px 0}
   /* Spinner */
   @keyframes spin{to{transform:rotate(360deg)}}
   .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
@@ -140,7 +144,7 @@
       <div class="input-row">
         <input type="text" id="flexAmt" placeholder="输入数量" />
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
+      <div class="pct-row">
         <button class="btn sm" onclick="setPct('flexAmt',10)">10%</button>
         <button class="btn sm" onclick="setPct('flexAmt',25)">25%</button>
         <button class="btn sm" onclick="setPct('flexAmt',50)">50%</button>
@@ -155,7 +159,7 @@
       <div class="input-row">
         <input type="text" id="fixedAmt" placeholder="输入数量" />
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
+      <div class="pct-row">
         <button class="btn sm" onclick="setPct('fixedAmt',10)">10%</button>
         <button class="btn sm" onclick="setPct('fixedAmt',25)">25%</button>
         <button class="btn sm" onclick="setPct('fixedAmt',50)">50%</button>
