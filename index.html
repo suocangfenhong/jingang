@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金刚 · 质押 & 质押大赛</title>
+<script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #08080f; --surface: #12121e; --border: #1e1e35;
+    --text: #e0e0f0; --muted: #6a6a85;
+    --accent: #8b5cf6; --accent2: #f59e0b;
+    --green: #34d399; --red: #f87171;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;line-height:1.5;overflow-x:hidden}
+  .container{max-width:720px;margin:0 auto;padding:20px 16px 80px}
+  .header{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:20px}
+  .logo{font-size:20px;font-weight:700}.logo span{color:var(--accent)}
+  #connectBtn{background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  #connectBtn:hover{opacity:.85}
+  #connectBtn.on{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  #walletAddr{font-size:12px;color:var(--muted);margin-top:4px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  .tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--surface);border-radius:var(--radius);padding:4px}
+  .tab{flex:1;text-align:center;padding:10px;font-size:13px;font-weight:600;cursor:pointer;border-radius:var(--radius-sm);color:var(--muted);transition:.2s}
+  .tab.active{background:var(--accent);color:#fff}
+  .tab:hover:not(.active){color:var(--text)}
+  .panel{display:none}.panel.active{display:block}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
+  .card-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+  .label{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .input-row{display:flex;gap:8px;margin-bottom:10px}
+  .input-row input,.input-row select{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px;outline:none}
+  .input-row input:focus{border-color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:14px;width:100%;margin-top:4px}
+  .btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.sm{width:auto;padding:6px 14px;font-size:12px}
+  .btn-outline{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+  .btn-outline:hover{background:rgba(139,92,246,.1)}
+  .btn-warn{border-color:var(--red);color:var(--red)}
+  .btn-warn:hover{background:rgba(248,113,113,.1)}
+  .info-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid var(--border)}
+  .info-row:last-child{border-bottom:none}
+  .info-row .val{font-weight:600}
+  .info-row .val.green{color:var(--green)}
+  .info-row .val.accent{color:var(--accent2)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .lb-table{width:100%;border-collapse:collapse;font-size:13px}
+  .lb-table th{text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+  .lb-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+  .rank{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:700;font-size:12px}
+  .rank.g0{background:rgba(245,158,11,.15);color:var(--accent2)}
+  .rank.g1{background:rgba(156,163,175,.15);color:#9ca3af}
+  .rank.g2{background:rgba(251,191,36,.12);color:#d97706}
+  .rank.gn{background:var(--border);color:var(--muted)}
+  .mono{font-family:'SF Mono','Fira Code',monospace;font-size:12px}
+  .countdown{display:flex;gap:6px;align-items:baseline}
+  .cd-val{font-size:32px;font-weight:700;font-variant-numeric:tabular-nums}
+  .cd-label{font-size:11px;color:var(--muted);text-transform:uppercase}
+  .cd-sep{font-size:24px;color:var(--muted)}
+  .round-num{font-size:28px;font-weight:800}
+  .fs-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px}
+  .fs-row .fs-id{color:var(--accent);font-weight:700}
+  .fs-row .fs-amt{font-weight:600}
+  .fs-row .fs-time{color:var(--muted);font-size:11px}
+  .no-data{text-align:center;color:var(--muted);padding:24px;font-size:14px}
+  .msg{font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);margin-top:8px;display:none}
+  .msg.ok{background:rgba(52,211,153,.1);color:var(--green)}
+  .msg.err{background:rgba(248,113,113,.1);color:var(--red)}
+  .msg.info{background:rgba(139,92,246,.1);color:var(--accent)}
+  @media(max-width:480px){
+    .container{padding:10px 8px 80px}
+    .cd-val{font-size:22px}.round-num{font-size:20px}
+    .header{flex-direction:column;gap:8px;align-items:flex-start}
+    .tabs{flex-wrap:wrap}
+    .tab{font-size:11px;padding:8px 6px}
+    .card{padding:14px}
+    .grid2{grid-template-columns:1fr}
+    .input-row{flex-direction:column}
+    .input-row input{width:100%}
+    .btn{height:44px}
+    .btn.sm{height:36px}
+    .lb-table{font-size:11px;display:block;overflow-x:auto}
+    .lb-table td,.lb-table th{padding:6px}
+    .fs-row{flex-wrap:wrap;gap:4px;font-size:12px}
+    .countdown{gap:3px}
+    .cd-sep{font-size:18px}
+    .rule-item{flex-direction:column;gap:6px}
+    .rule-num{width:24px;height:24px;font-size:11px}
+  }
+  .rules-list{display:flex;flex-direction:column;gap:0}
+  .rule-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+  .rule-item:last-child{border-bottom:none}
+  .rule-num{width:28px;height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;border-radius:50%;font-size:13px;font-weight:700}
+  .rule-text strong{font-size:14px;color:var(--text);display:block;margin-bottom:2px}
+  .rule-text p{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">金刚协议<span>CTO仪表盘</span></div>
+    <div>
+      <button id="connectBtn" onclick="connectWallet()">连接钱包</button>
+      <div id="walletAddr"></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-panel="panel-stake">质押</div>
+    <div class="tab" data-panel="panel-reward">质押大赛</div>
+    <div class="tab" data-panel="panel-fixed">质押管理</div>
+    <div class="tab" data-panel="panel-rules">规则</div>
+  </div>
+  <!-- Stake Panel -->
+  <div class="panel active" id="panel-stake">
+    <div class="card">
+      <div class="card-title">我的概览</div>
+      <div id="overview"><div class="no-data">请先连接钱包</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">活期质押</div>
+      <div class="label">质押数量</div>
+      <div class="input-row">
+        <input type="text" id="flexAmt" placeholder="输入数量" />
+        <button class="btn sm" onclick="setMax('flexAmt')">最大</button>
+      </div>
+      <button class="btn" id="btnFlexStake" onclick="flexStake()">活期质押</button>
+      <div id="msgFlexStake" class="msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">定期质押</div>
+      <div class="label">质押数量</div>
+      <div class="input-row">
+        <input type="text" id="fixedAmt" placeholder="输入数量" />
+        <button class="btn sm" onclick="setMax('fixedAmt')">最大</button>
+      </div>
+      <div class="label">推荐人地址 (可选)</div>
+      <div class="input-row">
+        <input type="text" id="referrer" placeholder="0x... 或留空" />
+      </div>
+      <button class="btn" id="btnFixedStake" onclick="fixedStake()">定期质押</button>
+      <div id="msgFixedStake" class="msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">领取分红</div>
+      <div class="info-row"><span>待领分红</span><span class="val accent" id="pendingReward">--</span></div>
+      <button class="btn" id="btnClaim" onclick="claim()">领取分红</button>
+      <div id="msgClaim" class="msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">邀请推广</div>
+      <div id="referralSection"><div class="no-data">请先连接钱包</div></div>
+    </div>
+    <div class="card">
+      <div class="info-row"><span>最低质押</span><span class="val" id="minStake">--</span></div>
+      <div class="info-row"><span>锁定期</span><span class="val" id="lockPeriod">--</span></div>
+      <div class="info-row"><span>代币合约</span><span class="val mono" id="kkTokenAddr">--</span></div>
+      <div class="info-row"><span>总质押量</span><span class="val" id="totalStaked">--</span></div>
+    </div>
+  </div>
+  <!-- Reward Panel -->
+  <div class="panel" id="panel-reward">
+    <div class="card">
+      <div class="card-title">当前轮次</div>
+      <div class="round-num" id="roundNum">--</div>
+      <div class="countdown" id="countdown" style="margin-top:10px">
+        <div style="text-align:center"><div class="cd-val" id="cdH">--</div><div class="cd-label">时</div></div>
+        <div class="cd-sep">:</div>
+        <div style="text-align:center"><div class="cd-val" id="cdM">--</div><div class="cd-label">分</div></div>
+        <div class="cd-sep">:</div>
+        <div style="text-align:center"><div class="cd-val" id="cdS">--</div><div class="cd-label">秒</div></div>
+      </div>
+      <div id="totalReward" style="margin-top:12px;display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.12);color:var(--accent2);padding:6px 14px;border-radius:20px;font-size:14px;font-weight:600"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">排行榜</div>
+      <div id="leaderboard"><div class="no-data">加载中...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">查询地址排名</div>
+      <div class="input-row">
+        <input type="text" id="queryAddr" placeholder="0x..." />
+        <button class="btn sm" onclick="queryRank()">查询</button>
+      </div>
+      <div id="rankResult" class="msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">历史轮次</div>
+      <div id="history"><div class="no-data">加载中...</div></div>
+    </div>
+  </div>
+  <!-- Fixed Panel -->
+  <div class="panel" id="panel-fixed">
+    <div class="card">
+      <div class="card-title">我的定期质押记录</div>
+      <div id="fixedStakes"><div class="no-data">请先连接钱包</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">活期质押状态</div>
+      <div id="flexStatus"><div class="no-data">请先连接钱包</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">活期赎回</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">赎回全部活期质押</p>
+      <button class="btn btn-warn" id="btnFlexRedeem" onclick="flexRedeem()">全部赎回</button>
+      <div id="msgFlexRedeem" class="msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">定期赎回</div>
+      <div class="label">输入定期质押 ID (idx)</div>
+      <div class="input-row">
+        <input type="text" id="redeemIdx" placeholder="输入 idx" />
+      </div>
+      <button class="btn btn-warn" id="btnFixedRedeem" onclick="fixedRedeem()">定期赎回</button>
+      <div id="msgFixedRedeem" class="msg"></div>
+    </div>
+  </div>
+  <!-- Rules Panel -->
+  <div class="panel" id="panel-rules">
+    <div class="card">
+      <div class="card-title">金刚协议 · 理财创新模型</div>
+      <p style="font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:16px">
+        金刚协议是基于BSC链的理财创新模型，由币安前技术团指导开发、BSC链顶级流量社区助力运营，合约权限已全部丢弃并和蝴蝶官方认证100％去中心化，链上可直接提取资产，安全透明。
+      </p>
+      <p style="font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:16px">
+        协议以金刚代币为核心，打造"动静双生"收益体系：静态靠质押分红赚金刚＋BNB，动态靠邀请拿双重收益，同时通过极致销毁机制实现代币通缩，目标冲刺币安现货收录，成为meme＋理财赛道龙头。
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">核心规则</div>
+      <div class="rules-list">
+        <div class="rule-item">
+          <div class="rule-num">1</div>
+          <div class="rule-text">
+            <strong>邀请奖励</strong>
+            <p>质押≥1万枚金刚并锁仓7天可得邀请码，享一代、二代各5%的收益分红</p>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">2</div>
+          <div class="rule-text">
+            <strong>质押分红</strong>
+            <p>灵活质押随进随出（撤仓扣5%税费销毁），7天定期质押权重更高（提前撤仓扣50%代币销毁）</p>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">3</div>
+          <div class="rule-text">
+            <strong>手续费分配</strong>
+            <p>代币买卖3%手续费，70%进分红池、30%进奖励池</p>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">4</div>
+          <div class="rule-text">
+            <strong>排名奖励</strong>
+            <p>每日开奖瓜分奖励池BNB，前10名按比例分配，奖池永续滚动</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">核心价值</div>
+      <p style="font-size:14px;color:var(--text);line-height:1.8">
+        持币质押即可持续赚取金刚和BNB LP分红，无需卖币也能获得稳定现金流。
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer style="text-align:center;padding:24px 16px 40px;color:var(--muted);font-size:12px;line-height:1.8">
+  <div style="margin-bottom:12px">由CTO社区成员自发创建的去中心化应用</div>
+  <div style="display:flex;justify-content:center;gap:16px">
+    <a href="#" id="linkTg" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;display:none">📱 TG</a>
+    <a href="#" id="linkTwitter" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;display:none">🐦 Twitter</a>
+    <a href="#" id="linkQq" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;display:none">💬 QQ群</a>
+  </div>
+</footer>
+
+<script>
+const SA = '0x5ae9be2c9f8f759c60d059992b4b3adaed5de6c6';
+const RA = '0x93921692846FF55d30F107a820F5867C0DF600Ab';
+const RPC = 'https://bsc-dataseed.binance.org';
+
+const SABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"BNB_THRESHOLD","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BUYBACK_DURATION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LOCK_PERIOD","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_STAKE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"expiredCheckIdx","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"idx","type":"uint256"}],"name":"fixedRedeem","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"referrer","type":"address"}],"name":"fixedStake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"referrer","type":"address"}],"name":"fixedStakeBehalf","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"flexStakeAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"flexibleRedeem","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"referrer","type":"address"}],"name":"flexibleStake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"offset","type":"uint256"},{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getFixedStakes","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"stakeTime","type":"uint256"},{"internalType":"bool","name":"redeemed","type":"bool"}],"internalType":"struct KKStaking.FixedStakeRecord[]","name":"records","type":"tuple[]"},{"internalType":"uint256[]","name":"globalIds","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserOverview","outputs":[{"components":[{"internalType":"uint256","name":"flexStake","type":"uint256"},{"internalType":"uint256","name":"totalSS","type":"uint256"},{"internalType":"uint256","name":"pendingReward","type":"uint256"},{"internalType":"uint256","name":"totalClaimedReward","type":"uint256"},{"internalType":"uint256","name":"fixedStakeCount","type":"uint256"},{"internalType":"bool","name":"canRefer","type":"bool"}],"internalType":"struct KKStaking.UserOverview","name":"info","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"kkToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"rewardPool","outputs":[{"internalType":"contract IRewardPool","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalStakedKK","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userTotalClaimed","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+const RABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"MAX_WINNERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"ROUND_DURATION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"WBNB","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"currentRound","outputs":[{"internalType":"uint256","name":"round","type":"uint256"},{"internalType":"uint256","name":"drawTime","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"firstDrawTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getRoundInfo","outputs":[{"components":[{"internalType":"uint256","name":"round","type":"uint256"},{"internalType":"uint256","name":"drawTime","type":"uint256"},{"internalType":"uint256","name":"totalReward","type":"uint256"},{"internalType":"address[]","name":"ranking","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"internalType":"struct KKRewardPool.RoundInfo","name":"info","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"round","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint256","name":"totalReward","type":"uint256"},{"internalType":"address[10]","name":"winners","type":"address[10]"}],"internalType":"struct KKRewardPool.RoundResult","name":"result","type":"tuple"},{"internalType":"uint256","name":"drawTime","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"round","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserRoundStake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastDrawnRound","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"recordFixedStake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"roundStake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_time","type":"uint256"}],"name":"setFirstDrawTime","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_staking","type":"address"}],"name":"setStakingContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"stakingContract","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawStuckTokens","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+const E20 = ["function approve(address,uint256) returns (bool)","function allowance(address,address) view returns (uint256)","function balanceOf(address) view returns (uint256)","function decimals() view returns (uint8)","function symbol() view returns (string)"];
+
+let P, S, R, W, A, KT, KD=18, MW=10, DT=0;
+
+function fa(a){return(a||'').slice(0,6)+'...'+(a||'').slice(-4)}
+function fn(n,d){d=d||18;return Number(ethers.utils.formatUnits(n,d)).toFixed(2)}
+function fb(n){return Number(ethers.utils.formatEther(n)).toFixed(4)}
+function mg(id,t,c){const e=document.getElementById(id);e.textContent=t;e.className='msg '+c;e.style.display='block';setTimeout(()=>e.style.display='none',6000)}
+
+async function init(){
+  P=new ethers.providers.JsonRpcProvider(RPC);
+  S=new ethers.Contract(SA,SABI,P);
+  R=new ethers.Contract(RA,RABI,P);
+  try{
+    const[kt,ms,lp,tw,mw]=await Promise.all([
+      S.kkToken(), S.MIN_STAKE(), S.LOCK_PERIOD(),
+      S.totalStakedKK(), R.MAX_WINNERS()
+    ]);
+    KT=kt;
+    const k=new ethers.Contract(KT,E20,P);
+    KD=await k.decimals();
+    document.getElementById('kkTokenAddr').textContent=fa(KT);
+    document.getElementById('minStake').textContent=fn(ms,KD)+' 金刚';
+    document.getElementById('lockPeriod').textContent=(lp.toNumber()/86400).toFixed(0)+' 天';
+    document.getElementById('totalStaked').textContent=fn(tw,KD)+' 金刚';
+    MW=mw.toNumber();
+    loadReward();
+    setInterval(loadReward,90000);
+    setInterval(updateCD,1000);
+  }catch(e){console.error(e)}
+}
+setTimeout(init,200);
+
+let activeProvider = null;
+
+function getProviders() {
+  const list = [];
+  // EIP-6963 multi-provider
+  if (window.ethereum?.providers) {
+    window.ethereum.providers.forEach((p, i) => {
+      let name = 'Injected #' + (i + 1);
+      if (p.isMetaMask) name = 'MetaMask';
+      else if (p.isOKExWallet || p.isOKX) name = 'OKX Wallet';
+      else if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
+      else if (p.isTokenPocket) name = 'TokenPocket';
+      else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
+      list.push({ name, provider: p });
+    });
+  }
+  // Fallback: single ethereum
+  if (list.length === 0 && window.ethereum) {
+    let name = 'MetaMask';
+    if (window.okxwallet) name = 'OKX Wallet';
+    else if (window.ethereum.isTrust) name = 'Trust Wallet';
+    else if (window.ethereum.isTokenPocket) name = 'TokenPocket';
+    list.push({ name, provider: window.ethereum });
+  }
+  // OKX native
+  if (window.okxwallet && !list.find(p => p.name === 'OKX Wallet')) {
+    list.push({ name: 'OKX Wallet', provider: window.okxwallet });
+  }
+  // Binance
+  if (window.BinanceChain) {
+    list.push({ name: 'Binance Wallet', provider: window.BinanceChain });
+  }
+  // AVE
+  if (window.ave && !list.find(p => p.provider === window.ave)) {
+    list.push({ name: 'AVE Wallet', provider: window.ave });
+  }
+  return list;
+}
+
+async function connectWallet() {
+  if (A) { A = null; W = null; activeProvider = null; updateUI(); loadOV(); loadFS(); return; }
+  const providers = getProviders();
+  if (providers.length === 0) return alert('未检测到钱包，请安装 MetaMask / OKX / Trust / TokenPocket');
+  if (providers.length === 1) {
+    await connectProvider(providers[0]);
+  } else {
+    showWalletSelector(providers);
+  }
+}
+
+async function connectProvider(p) {
+  try {
+    const a = await p.provider.request({ method: 'eth_requestAccounts' });
+    A = a[0]; activeProvider = p.provider;
+    W = new ethers.providers.Web3Provider(p.provider).getSigner();
+    updateUI(); loadOV(); loadFS();
+    p.provider.on('accountsChanged', x => {
+      if (!x.length) { A = null; W = null; activeProvider = null; updateUI(); loadOV(); loadFS(); }
+      else { A = x[0]; updateUI(); loadOV(); loadFS(); }
+    });
+    p.provider.on('chainChanged', () => location.reload());
+    hideWalletSelector();
+  } catch (e) { console.error(e); }
+}
+
+function showWalletSelector(providers) {
+  let el = document.getElementById('walletModal');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'walletModal';
+    el.innerHTML = '<div class="wm-overlay" onclick="hideWalletSelector()"></div><div class="wm-box"><div class="wm-title">选择钱包</div><div id="wmList"></div></div>';
+    document.body.appendChild(el);
+    const style = document.createElement('style');
+    style.textContent = '.wm-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:999}.wm-box{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:16px 16px 0 0;padding:20px;z-index:1000;max-height:60vh;overflow-y:auto}.wm-title{font-size:16px;font-weight:700;margin-bottom:12px;text-align:center}.wm-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:600}.wm-item:hover{border-color:var(--accent)}';
+    document.head.appendChild(style);
+  }
+  window._providers = providers;
+  const list = document.getElementById('wmList');
+  list.innerHTML = providers.map((p, i) => `<div class="wm-item" onclick="connectProviderByIdx(${i})">${p.name}</div>`).join('');
+  el.style.display = 'block';
+}
+
+function connectProviderByIdx(i) { connectProvider(window._providers[i]); }
+
+function hideWalletSelector() {
+  const el = document.getElementById('walletModal');
+  if (el) el.style.display = 'none';
+}
+function updateUI(){
+  const b=document.getElementById('connectBtn');
+  if(A){b.textContent='断开';b.classList.add('on');document.getElementById('walletAddr').textContent=fa(A)}
+  else{b.textContent='连接钱包';b.classList.remove('on');document.getElementById('walletAddr').textContent=''}
+}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');document.getElementById(t.dataset.panel).classList.add('active');
+  if(t.dataset.panel==='panel-reward')loadReward();
+  if(t.dataset.panel==='panel-fixed')loadFS();
+}));
+
+async function loadOV(){
+  const e=document.getElementById('overview');
+  if(!A){e.innerHTML='<div class="no-data">请先连接钱包</div>';document.getElementById('pendingReward').textContent='--';return}
+  try{
+    const i=await S.getUserOverview(A);
+    const tw=await S.totalStakedKK();
+    const pct=tw.gt(0)?(Number(i.totalSS)/Number(tw)*100).toFixed(2):'0.00';
+    const pr=fn(i.pendingReward,KD);
+    document.getElementById('pendingReward').textContent=pr+' LP';
+    e.innerHTML=`<div class="grid2">
+      <div class="info-row"><span>活期质押</span><span class="val">${fn(i.flexStake,KD)} 金刚</span></div>
+      <div class="info-row"><span>个人占比 (%)</span><span class="val">${pct}%</span></div>
+      <div class="info-row"><span>待领分红</span><span class="val accent">${pr} LP</span></div>
+      <div class="info-row"><span>已领分红</span><span class="val green">${fn(i.totalClaimedReward,KD)} LP</span></div>
+      <div class="info-row"><span>定期笔数</span><span class="val">${i.fixedStakeCount.toString()}</span></div>
+      <div class="info-row"><span>可推荐</span><span class="val">${i.canRefer?'✅':'❌'}</span></div>
+    </div>`;
+    // 邀请推广
+    const rs=document.getElementById('referralSection');
+    if(i.canRefer){
+      rs.innerHTML=`<p style="font-size:13px;color:var(--muted);margin-bottom:10px">邀请好友质押，享一代二代各5%收益分红</p>
+        <button class="btn" onclick="genInviteLink()">生成邀请链接</button>
+        <div id="inviteLink" style="display:none;margin-top:10px">
+          <div style="display:flex;gap:8px">
+            <input type="text" id="inviteUrl" readonly style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-size:12px" />
+            <button class="btn sm" onclick="copyInvite()">复制</button>
+          </div>
+        </div>`;
+    }else{
+      rs.innerHTML='<p style="font-size:13px;color:var(--muted)">未激活 — 质押≥1万金刚并锁仓7天即可获得邀请码</p>';
+    }
+  }catch(e){e.innerHTML='<div class="no-data">加载失败</div>'}
+}
+
+async function setMax(fid){
+  if(!A)return alert('请先连接钱包');
+  const k=new ethers.Contract(KT,E20,P);
+  const b=await k.balanceOf(A);
+  document.getElementById(fid).value=ethers.utils.formatUnits(b,KD);
+}
+
+async function ensureApp(amt){
+  const k=new ethers.Contract(KT,E20,W);
+  const al=await k.allowance(A,SA);
+  if(al.gte(amt))return true;
+  mg('msgFlexStake','需要授权代币...','info');
+  const tx=await k.approve(SA,ethers.constants.MaxUint256);
+  await tx.wait();mg('msgFlexStake','授权成功','ok');return true;
+}
+
+async function flexStake(){
+  if(!A)return alert('请先连接钱包');
+  const v=document.getElementById('flexAmt').value;
+  if(!v||parseFloat(v)<=0)return mg('msgFlexStake','请输入数量','err');
+  try{
+    const amt=ethers.utils.parseUnits(v,KD);
+    await ensureApp(amt);
+    const c=S.connect(W);
+    const tx=await c.flexibleStake(amt,'0x0000000000000000000000000000000000000000');
+    mg('msgFlexStake','交易已提交...','info');await tx.wait();
+    mg('msgFlexStake','活期质押成功!','ok');loadOV();
+  }catch(e){mg('msgFlexStake',e.reason||e.message,'err')}
+}
+
+async function flexRedeem(){
+  if(!A)return alert('请先连接钱包');
+  try{
+    const c=S.connect(W);const tx=await c.flexibleRedeem();
+    mg('msgFlexRedeem','交易已提交...','info');await tx.wait();
+    mg('msgFlexRedeem','赎回成功!','ok');loadOV();
+  }catch(e){mg('msgFlexRedeem',e.reason||e.message,'err')}
+}
+
+async function fixedStake(){
+  if(!A)return alert('请先连接钱包');
+  const v=document.getElementById('fixedAmt').value;
+  if(!v||parseFloat(v)<=0)return mg('msgFixedStake','请输入数量','err');
+  const ref=document.getElementById('referrer').value.trim()||'0x0000000000000000000000000000000000000000';
+  if(ref!=='0x0000000000000000000000000000000000000000'&&!ethers.utils.isAddress(ref))return mg('msgFixedStake','推荐人地址无效','err');
+  try{
+    const amt=ethers.utils.parseUnits(v,KD);await ensureApp(amt);
+    const c=S.connect(W);const tx=await c.fixedStake(amt,ref);
+    mg('msgFixedStake','交易已提交...','info');await tx.wait();
+    mg('msgFixedStake','定期质押成功!','ok');loadOV();loadFS();
+  }catch(e){mg('msgFixedStake',e.reason||e.message,'err')}
+}
+
+async function claim(){
+  if(!A)return alert('请先连接钱包');
+  try{
+    const c=S.connect(W);const tx=await c.claim();
+    mg('msgClaim','交易已提交...','info');await tx.wait();
+    mg('msgClaim','分红领取成功!','ok');loadOV();
+  }catch(e){mg('msgClaim',e.reason||e.message,'err')}
+}
+
+async function loadFS(){
+  const e=document.getElementById('fixedStakes');
+  if(!A){e.innerHTML='<div class="no-data">请先连接钱包</div>';return}
+  try{
+    const i=await S.getUserOverview(A);
+    const cnt=i.fixedStakeCount.toNumber();
+    if(cnt===0){e.innerHTML='<div class="no-data">暂无定期质押</div>';return}
+    const[recs,ids]=await S.getFixedStakes(A,0,cnt);
+    let h='';
+    for(let i=0;i<recs.length;i++){
+      const r=recs[i];const id=ids[i].toString();
+      const d=new Date(r.stakeTime.toNumber()*1000).toLocaleDateString('zh-CN');
+      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span><span style="font-size:12px">${r.redeemed?'<span style="color:var(--green)">已赎回</span>':'<span style="color:var(--accent2)">锁定中</span>'}</span></div>`;
+    }
+    e.innerHTML=h;
+  }catch(x){e.innerHTML='<div class="no-data">加载失败</div>'}
+  // 活期状态
+  const fs=document.getElementById('flexStatus');
+  try{
+    const famt=await S.flexStakeAmount(A);
+    if(famt.gt(0)){
+      fs.innerHTML=`<div class="info-row"><span>活期质押中</span><span class="val">${fn(famt,KD)} 金刚</span></div>`;
+    }else{
+      fs.innerHTML='<div class="no-data">暂无活期质押</div>';
+    }
+  }catch(x){fs.innerHTML='<div class="no-data">加载失败</div>'}
+}
+
+async function fixedRedeem(){
+  if(!A)return alert('请先连接钱包');
+  const idx=document.getElementById('redeemIdx').value;
+  if(!idx)return mg('msgFixedRedeem','请输入 idx','err');
+  try{
+    const c=S.connect(W);const tx=await c.fixedRedeem(idx);
+    mg('msgFixedRedeem','交易已提交...','info');await tx.wait();
+    mg('msgFixedRedeem','赎回成功!','ok');loadOV();loadFS();
+  }catch(e){mg('msgFixedRedeem',e.reason||e.message,'err')}
+}
+
+async function loadReward(){
+  try{
+    const[rn,dt]=await R.currentRound();
+    document.getElementById('roundNum').textContent='Round #'+rn.toString();
+    DT=dt.toNumber();updateCD();
+    const info=await R.getRoundInfo();
+    const tr=document.getElementById('totalReward');
+    if(info.totalReward?.gt(0)){tr.style.display='inline-flex';tr.innerHTML='🏆 总奖池 '+fb(info.totalReward)+' BNB'}
+    if(info.ranking?.length){
+      const BPS=[3000,1500,1000,500,500,500,500,500,500,500];
+      const totalR=info.totalReward?Number(ethers.utils.formatEther(info.totalReward)):0;
+      let h='<table class="lb-table"><thead><tr><th>#</th><th>地址</th><th>质押</th><th>占比</th><th>奖励</th></tr></thead><tbody>';
+      for(let i=0;i<Math.min(info.ranking.length,MW);i++){
+        const rc=i===0?'g0':i===1?'g1':i===2?'g2':'gn';
+        const icon=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+        const pct=(BPS[i]/100).toFixed(1);
+        const reward=totalR>0?(totalR*BPS[i]/10000).toFixed(4):'0.0000';
+        h+=`<tr><td><div class="rank ${rc}">${icon}</div></td><td class="mono">${fa(info.ranking[i])}</td><td>${fb(info.amounts[i])} 金刚</td><td style="color:var(--accent2);font-weight:600">${pct}%</td><td style="color:var(--green);font-weight:600">${reward} BNB</td></tr>`;
+      }
+      h+='</tbody></table>';
+      document.getElementById('leaderboard').innerHTML=h;
+    }
+    const lr=(await R.lastDrawnRound()).toNumber();
+    if(lr>0){
+      document.getElementById('history').innerHTML=`<button class="btn btn-outline" onclick="loadHistory()" style="width:auto;margin:0 auto;display:block">加载历史轮次</button>`;
+    }
+  }catch(e){console.error(e)}
+}
+
+async function loadHistory(){
+  const hh=document.getElementById('history');
+  hh.innerHTML='<div class="no-data">加载中...</div>';
+  try{
+    const lr=(await R.lastDrawnRound()).toNumber();
+    let html='';
+    for(let r=lr;r>Math.max(0,lr-3);r--){
+      try{
+        const[res,dt2]=await R.getRoundResult(r);
+        const ws=res.winners.filter(w=>w!=='0x0000000000000000000000000000000000000000');
+        const ds=new Date(dt2.toNumber()*1000).toLocaleString('zh-CN');
+        const totalR=Number(ethers.utils.formatEther(res.totalReward));
+        const BPS=[3000,1500,1000,500,500,500,500,500,500,500];
+        const rows=ws.map((w,i)=>{
+          const pct=(BPS[i]/100).toFixed(1);
+          const reward=totalR>0?(totalR*BPS[i]/10000).toFixed(4):'0.0000';
+          const icon=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+          return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px">
+            <span class="mono">${icon} ${fa(w)} <span style="color:var(--muted);font-size:11px">${pct}%</span></span>
+            <span style="color:var(--accent2);font-weight:600">${reward} BNB</span>
+          </div>`;
+        }).join('');
+        html+=`<div class="card" style="cursor:pointer" onclick="this.classList.toggle('open')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>Round #${r}</strong><span style="color:var(--muted);font-size:12px">${ds}</span>
+            <span style="color:var(--accent2)">${totalR.toFixed(2)} BNB · ${ws.length}人</span>
+          </div>
+          <div class="w" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">${rows}</div></div>`;
+      }catch(e){}
+    }
+    hh.innerHTML=html+'<style>.open .w{display:block!important}</style>';
+  }catch(e){hh.innerHTML='<div class="no-data">加载失败</div>'}
+}
+
+function updateCD(){
+  if(!DT)return;
+  const l=Math.max(0,DT-Math.floor(Date.now()/1000));
+  document.getElementById('cdH').textContent=String(Math.floor(l/3600)).padStart(2,'0');
+  document.getElementById('cdM').textContent=String(Math.floor((l%3600)/60)).padStart(2,'0');
+  document.getElementById('cdS').textContent=String(l%60).padStart(2,'0');
+}
+
+async function queryRank(){
+  const ad=document.getElementById('queryAddr').value.trim();
+  const e=document.getElementById('rankResult');
+  if(!ethers.utils.isAddress(ad)){e.style.display='block';e.className='msg err';e.textContent='无效地址';return}
+  try{
+    const[rn]=await R.currentRound();
+    const st=await R.getUserRoundStake(rn,ad);
+    e.style.display='block';
+    if(st.eq(0)){e.className='msg info';e.textContent=`Round #${rn}: 无质押记录`}
+    else{e.className='msg ok';e.textContent=`Round #${rn}: 质押 ${fb(st)} BNB`}
+  }catch(x){e.style.display='block';e.className='msg err';e.textContent='查询失败'}
+}
+
+function genInviteLink(){
+  const url=location.origin+location.pathname+'?ref='+A;
+  document.getElementById('inviteUrl').value=url;
+  document.getElementById('inviteLink').style.display='block';
+}
+
+function copyInvite(){
+  const el=document.getElementById('inviteUrl');
+  el.select();document.execCommand('copy');
+  mg('msgClaim','链接已复制!','ok');
+}
+
+// 自动读取邀请参数
+(function(){
+  const ref=new URLSearchParams(location.search).get('ref');
+  if(ref&&ethers.utils.isAddress(ref)){
+    document.getElementById('referrer').value=ref;
+  }
+})();
+
+init();
+</script>
+</body>
+</html>
