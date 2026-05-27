@@ -573,6 +573,7 @@ async function setMax(fid){
 }
 
 async function ensureApp(amt){
+  if(!KT){KT=await S.kkToken();KD=await new ethers.Contract(KT,E20,WP||P).decimals()}
   const k=new ethers.Contract(KT,E20,W);
   const al=await k.allowance(A,SA);
   if(al.gte(amt))return true;
