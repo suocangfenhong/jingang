@@ -303,7 +303,7 @@ const RABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
 
 const E20 = ["function approve(address,uint256) returns (bool)","function allowance(address,address) view returns (uint256)","function balanceOf(address) view returns (uint256)","function decimals() view returns (uint8)","function symbol() view returns (string)"];
 
-let P, S, R, W, A, KT, KD=18, MW=10, DT=0;
+let P, S, R, W, WP, A, KT, KD=18, MW=10, DT=0;
 
 function fa(a){return(a||'').slice(0,6)+'...'+(a||'').slice(-4)}
 function fn(n,d){d=d||18;return Number(ethers.utils.formatUnits(n,d)).toFixed(2)}
@@ -406,6 +406,10 @@ async function connectProvider(p) {
     const a = await p.provider.request({ method: 'eth_requestAccounts' });
     A = a[0]; activeProvider = p.provider;
     W = new ethers.providers.Web3Provider(p.provider).getSigner();
+    // 用钱包provider做只读，手机端兼容
+    WP = new ethers.providers.Web3Provider(p.provider);
+    S = new ethers.Contract(SA, SABI, WP);
+    R = new ethers.Contract(RA, RABI, WP);
     updateUI(); loadOV(); loadFS();
     p.provider.on('accountsChanged', x => {
       if (!x.length) { A = null; W = null; activeProvider = null; updateUI(); loadOV(); loadFS(); }
