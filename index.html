@@ -135,27 +135,37 @@
       <div id="overview"><div class="no-data">请先连接钱包</div></div>
     </div>
     <div class="card">
-      <div class="card-title">活期质押</div>
-      <div class="label">质押数量</div>
+      <div class="card-title">活期质押 <span style="font-size:11px;color:var(--muted);font-weight:400">· 随进随出，取消扣除5%进黑洞</span></div>
+      <div class="label">质押数量 <span style="font-size:11px;color:var(--muted)">最小 10,000 金刚起</span></div>
       <div class="input-row">
         <input type="text" id="flexAmt" placeholder="输入数量" />
-        <button class="btn sm" onclick="setMax('flexAmt')">最大</button>
       </div>
-      <button class="btn" id="btnFlexStake" onclick="flexStake()">活期质押</button>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="btn sm" onclick="setPct('flexAmt',10)">10%</button>
+        <button class="btn sm" onclick="setPct('flexAmt',25)">25%</button>
+        <button class="btn sm" onclick="setPct('flexAmt',50)">50%</button>
+        <button class="btn sm" onclick="setPct('flexAmt',100)">100%</button>
+      </div>
+      <button class="btn" id="btnFlexStake" onclick="flexStake()">确认质押</button>
       <div id="msgFlexStake" class="msg"></div>
     </div>
     <div class="card">
-      <div class="card-title">定期质押</div>
-      <div class="label">质押数量</div>
+      <div class="card-title">定期质押 <span style="font-size:11px;color:var(--muted);font-weight:400">· 7天锁仓，提前解押扣除50%进黑洞，到期解押0扣除</span></div>
+      <div class="label">质押数量 <span style="font-size:11px;color:var(--muted)">最小 10,000 金刚起</span></div>
       <div class="input-row">
         <input type="text" id="fixedAmt" placeholder="输入数量" />
-        <button class="btn sm" onclick="setMax('fixedAmt')">最大</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="btn sm" onclick="setPct('fixedAmt',10)">10%</button>
+        <button class="btn sm" onclick="setPct('fixedAmt',25)">25%</button>
+        <button class="btn sm" onclick="setPct('fixedAmt',50)">50%</button>
+        <button class="btn sm" onclick="setPct('fixedAmt',100)">100%</button>
       </div>
       <div class="label">推荐人地址 (可选)</div>
       <div class="input-row">
         <input type="text" id="referrer" placeholder="0x... 或留空" />
       </div>
-      <button class="btn" id="btnFixedStake" onclick="fixedStake()">定期质押</button>
+      <button class="btn" id="btnFixedStake" onclick="fixedStake()">确认质押</button>
       <div id="msgFixedStake" class="msg"></div>
     </div>
     <div class="card">
@@ -567,9 +577,17 @@ async function loadOV(){
 
 async function setMax(fid){
   if(!A)return alert('请先连接钱包');
-  const k=new ethers.Contract(KT,E20,P);
+  if(!KT){KT=await S.kkToken();KD=await new ethers.Contract(KT,E20,WP||P).decimals()}
+  const k=new ethers.Contract(KT,E20,WP||P);
   const b=await k.balanceOf(A);
   document.getElementById(fid).value=ethers.utils.formatUnits(b,KD);
+}
+async function setPct(fid,pct){
+  if(!A)return alert('请先连接钱包');
+  if(!KT){KT=await S.kkToken();KD=await new ethers.Contract(KT,E20,WP||P).decimals()}
+  const k=new ethers.Contract(KT,E20,WP||P);
+  const b=await k.balanceOf(A);
+  document.getElementById(fid).value=ethers.utils.formatUnits(b.mul(pct).div(100),KD);
 }
 
 async function ensureApp(amt){
