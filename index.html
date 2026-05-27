@@ -283,7 +283,19 @@
 <script>
 const SA = '0x5ae9be2c9f8f759c60d059992b4b3adaed5de6c6';
 const RA = '0x93921692846FF55d30F107a820F5867C0DF600Ab';
-const RPC = 'https://bsc-dataseed.binance.org';
+const RPCS = [
+  'https://bsc-dataseed1.binance.org',
+  'https://bsc-dataseed2.binance.org',
+  'https://bsc-dataseed3.binance.org',
+  'https://bsc-dataseed4.binance.org',
+  'https://bsc-dataseed1.defibit.io',
+  'https://bsc-dataseed2.defibit.io',
+  'https://bsc-dataseed1.ninicoin.io',
+  'https://bsc-dataseed2.ninicoin.io',
+  'https://rpc.ankr.com/bsc',
+  'https://bsc.publicnode.com'
+];
+let RPC = RPCS[0];
 
 const SABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"BNB_THRESHOLD","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BUYBACK_DURATION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LOCK_PERIOD","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_STAKE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"expiredCheckIdx","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"idx","type":"uint256"}],"name":"fixedRedeem","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"referrer","type":"address"}],"name":"fixedStake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"referrer","type":"address"}],"name":"fixedStakeBehalf","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"flexStakeAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"flexibleRedeem","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"referrer","type":"address"}],"name":"flexibleStake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"offset","type":"uint256"},{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getFixedStakes","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"stakeTime","type":"uint256"},{"internalType":"bool","name":"redeemed","type":"bool"}],"internalType":"struct KKStaking.FixedStakeRecord[]","name":"records","type":"tuple[]"},{"internalType":"uint256[]","name":"globalIds","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserOverview","outputs":[{"components":[{"internalType":"uint256","name":"flexStake","type":"uint256"},{"internalType":"uint256","name":"totalSS","type":"uint256"},{"internalType":"uint256","name":"pendingReward","type":"uint256"},{"internalType":"uint256","name":"totalClaimedReward","type":"uint256"},{"internalType":"uint256","name":"fixedStakeCount","type":"uint256"},{"internalType":"bool","name":"canRefer","type":"bool"}],"internalType":"struct KKStaking.UserOverview","name":"info","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"kkToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"rewardPool","outputs":[{"internalType":"contract IRewardPool","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalStakedKK","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userTotalClaimed","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
 
@@ -299,28 +311,45 @@ function fb(n){return Number(ethers.utils.formatEther(n)).toFixed(4)}
 function mg(id,t,c){const e=document.getElementById(id);e.textContent=t;e.className='msg '+c;e.style.display='block';setTimeout(()=>e.style.display='none',6000)}
 
 async function init(){
-  P=new ethers.providers.JsonRpcProvider(RPC);
-  S=new ethers.Contract(SA,SABI,P);
-  R=new ethers.Contract(RA,RABI,P);
+  // 轮询可用的RPC
+  let connected = false;
+  for (let i = 0; i < RPCS.length; i++) {
+    try {
+      RPC = RPCS[i];
+      P = new ethers.providers.JsonRpcProvider(RPC);
+      await P.getBlockNumber();
+      connected = true;
+      break;
+    } catch(e) { console.warn('RPC failed:', RPCS[i]); }
+  }
+  if (!connected) {
+    document.getElementById('overview').innerHTML = '<div class="no-data" style="color:var(--red)">网络连接失败，请刷新重试</div>';
+    return;
+  }
+  S = new ethers.Contract(SA, SABI, P);
+  R = new ethers.Contract(RA, RABI, P);
   try{
-    const[kt,ms,lp,tw,mw]=await Promise.all([
+    const[kt, ms, lp, tw, mw] = await Promise.all([
       S.kkToken(), S.MIN_STAKE(), S.LOCK_PERIOD(),
       S.totalStakedKK(), R.MAX_WINNERS()
     ]);
-    KT=kt;
-    const k=new ethers.Contract(KT,E20,P);
-    KD=await k.decimals();
-    document.getElementById('kkTokenAddr').textContent=fa(KT);
-    document.getElementById('minStake').textContent=fn(ms,KD)+' 金刚';
-    document.getElementById('lockPeriod').textContent=(lp.toNumber()/86400).toFixed(0)+' 天';
-    document.getElementById('totalStaked').textContent=fn(tw,KD)+' 金刚';
-    MW=mw.toNumber();
+    KT = kt;
+    const k = new ethers.Contract(KT, E20, P);
+    KD = await k.decimals();
+    document.getElementById('kkTokenAddr').textContent = fa(KT);
+    document.getElementById('minStake').textContent = fn(ms, KD) + ' 金刚';
+    document.getElementById('lockPeriod').textContent = (lp.toNumber() / 86400).toFixed(0) + ' 天';
+    document.getElementById('totalStaked').textContent = fn(tw, KD) + ' 金刚';
+    MW = mw.toNumber();
     loadReward();
-    setInterval(loadReward,90000);
-    setInterval(updateCD,1000);
-  }catch(e){console.error(e)}
+    setInterval(loadReward, 90000);
+    setInterval(updateCD, 1000);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('overview').innerHTML = '<div class="no-data" style="color:var(--red)">加载合约数据失败</div>';
+  }
 }
-setTimeout(init,200);
+init();
 
 let activeProvider = null;
 
