@@ -95,6 +95,22 @@
   .rule-num{width:28px;height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;border-radius:50%;font-size:13px;font-weight:700}
   .rule-text strong{font-size:14px;color:var(--text);display:block;margin-bottom:2px}
   .rule-text p{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+  /* Spinner */
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+  .btn.loading{pointer-events:none;opacity:.7}
+  .btn.loading::before{content:'';display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite;margin-right:8px;vertical-align:middle}
+  @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+  .skeleton{background:linear-gradient(90deg,var(--surface) 25%,var(--border) 37%,var(--surface) 63%);background-size:400px 100%;animation:shimmer 1.4s ease infinite;border-radius:var(--radius-sm)}
+  .skeleton-row{height:20px;margin-bottom:8px}
+  .skeleton-row.short{width:60%}
+  .sk-card{padding:20px}
+  /* Chain modal */
+  .chain-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center}
+  .chain-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;text-align:center;max-width:360px;width:90%}
+  .chain-box h3{font-size:18px;margin-bottom:8px}
+  .chain-box p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+  .chain-box .btn{margin-top:8px}
 </style>
 </head>
 <body>
@@ -309,6 +325,11 @@ function fa(a){return(a||'').slice(0,6)+'...'+(a||'').slice(-4)}
 function fn(n,d){d=d||18;return Number(ethers.utils.formatUnits(n,d)).toFixed(2)}
 function fb(n){return Number(ethers.utils.formatEther(n)).toFixed(4)}
 function mg(id,t,c){const e=document.getElementById(id);e.textContent=t;e.className='msg '+c;e.style.display='block';setTimeout(()=>e.style.display='none',6000)}
+function setLoading(id,loading){
+  const b=document.getElementById(id);
+  if(loading){b.classList.add('loading');b.disabled=true}
+  else{b.classList.remove('loading');b.disabled=false}
+}
 
 async function init(){
   // 轮询可用的RPC
@@ -403,10 +424,20 @@ async function connectWallet() {
 
 async function connectProvider(p) {
   try {
+    const chainId = await p.provider.request({ method: 'eth_chainId' });
+    if (chainId !== '0x38') {
+      showChainModal(p);
+      return;
+    }
+    await connectWalletFinalize(p);
+  } catch (e) { console.error(e); }
+}
+
+async function connectWalletFinalize(p) {
+  try {
     const a = await p.provider.request({ method: 'eth_requestAccounts' });
     A = a[0]; activeProvider = p.provider;
     W = new ethers.providers.Web3Provider(p.provider).getSigner();
-    // 用钱包provider做只读，手机端兼容
     WP = new ethers.providers.Web3Provider(p.provider);
     S = new ethers.Contract(SA, SABI, WP);
     R = new ethers.Contract(RA, RABI, WP);
@@ -418,6 +449,44 @@ async function connectProvider(p) {
     p.provider.on('chainChanged', () => location.reload());
     hideWalletSelector();
   } catch (e) { console.error(e); }
+}
+
+function showChainModal(p) {
+  hideWalletSelector();
+  let el = document.getElementById('chainModal');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'chainModal';
+    el.innerHTML = '<div class="chain-overlay"><div class="chain-box"><h3>⚠️ 网络错误</h3><p>请切换到 BSC 主网</p><button class="btn" id="btnSwitchChain">切换至 BSC</button><button class="btn btn-outline" id="btnAddBSC" style="margin-top:8px">添加 BSC 网络</button></div></div>';
+    document.body.appendChild(el);
+    document.getElementById('btnSwitchChain').onclick = () => switchChain(p);
+    document.getElementById('btnAddBSC').onclick = () => addBSC(p);
+  }
+  el.style.display = 'block';
+}
+
+async function switchChain(p) {
+  try {
+    await p.provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
+    document.getElementById('chainModal').style.display = 'none';
+    await connectWalletFinalize(p);
+  } catch (e) {
+    if (e.code === 4902) addBSC(p);
+    else alert('切换失败: ' + (e.message || '未知错误'));
+  }
+}
+
+async function addBSC(p) {
+  try {
+    await p.provider.request({ method: 'wallet_addEthereumChain', params: [{
+      chainId: '0x38', chainName: 'BNB Smart Chain',
+      nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+      rpcUrls: ['https://bsc-dataseed.binance.org'],
+      blockExplorerUrls: ['https://bscscan.com']
+    }]});
+    document.getElementById('chainModal').style.display = 'none';
+    await connectWalletFinalize(p);
+  } catch (e) { alert('添加BSC网络失败: ' + (e.message || '未知错误')); }
 }
 
 function showWalletSelector(providers) {
@@ -457,9 +526,13 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   if(t.dataset.panel==='panel-fixed')loadFS();
 }));
 
+function skOverview(){return'<div class="sk-card"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row short"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row short"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row short"></div></div>'}
+function skTable(){return'<div class="sk-card">'+Array(5).fill('<div class="skeleton skeleton-row"></div>').join('')+'</div>'}
+
 async function loadOV(){
   const e=document.getElementById('overview');
   if(!A){e.innerHTML='<div class="no-data">请先连接钱包</div>';document.getElementById('pendingReward').textContent='--';return}
+  e.innerHTML=skOverview();
   try{
     const i=await S.getUserOverview(A);
     const tw=await S.totalStakedKK();
@@ -474,7 +547,6 @@ async function loadOV(){
       <div class="info-row"><span>定期笔数</span><span class="val">${i.fixedStakeCount.toString()}</span></div>
       <div class="info-row"><span>可推荐</span><span class="val">${i.canRefer?'✅':'❌'}</span></div>
     </div>`;
-    // 邀请推广
     const rs=document.getElementById('referralSection');
     if(i.canRefer){
       rs.innerHTML=`<p style="font-size:13px;color:var(--muted);margin-bottom:10px">邀请好友质押，享一代二代各5%收益分红</p>
@@ -488,7 +560,7 @@ async function loadOV(){
     }else{
       rs.innerHTML='<p style="font-size:13px;color:var(--muted)">未激活 — 质押≥1万金刚并锁仓7天即可获得邀请码</p>';
     }
-  }catch(e){e.innerHTML='<div class="no-data">加载失败</div>'}
+  }catch(err){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadOV();return false" style="color:var(--accent)">重试</a></div>'}
 }
 
 async function setMax(fid){
@@ -511,6 +583,7 @@ async function flexStake(){
   if(!A)return alert('请先连接钱包');
   const v=document.getElementById('flexAmt').value;
   if(!v||parseFloat(v)<=0)return mg('msgFlexStake','请输入数量','err');
+  setLoading('btnFlexStake',true);
   try{
     const amt=ethers.utils.parseUnits(v,KD);
     await ensureApp(amt);
@@ -519,15 +592,18 @@ async function flexStake(){
     mg('msgFlexStake','交易已提交...','info');await tx.wait();
     mg('msgFlexStake','活期质押成功!','ok');loadOV();
   }catch(e){mg('msgFlexStake',e.reason||e.message,'err')}
+  finally{setLoading('btnFlexStake',false)}
 }
 
 async function flexRedeem(){
   if(!A)return alert('请先连接钱包');
+  setLoading('btnFlexRedeem',true);
   try{
     const c=S.connect(W);const tx=await c.flexibleRedeem();
     mg('msgFlexRedeem','交易已提交...','info');await tx.wait();
     mg('msgFlexRedeem','赎回成功!','ok');loadOV();
   }catch(e){mg('msgFlexRedeem',e.reason||e.message,'err')}
+  finally{setLoading('btnFlexRedeem',false)}
 }
 
 async function fixedStake(){
@@ -536,26 +612,31 @@ async function fixedStake(){
   if(!v||parseFloat(v)<=0)return mg('msgFixedStake','请输入数量','err');
   const ref=document.getElementById('referrer').value.trim()||'0x0000000000000000000000000000000000000000';
   if(ref!=='0x0000000000000000000000000000000000000000'&&!ethers.utils.isAddress(ref))return mg('msgFixedStake','推荐人地址无效','err');
+  setLoading('btnFixedStake',true);
   try{
     const amt=ethers.utils.parseUnits(v,KD);await ensureApp(amt);
     const c=S.connect(W);const tx=await c.fixedStake(amt,ref);
     mg('msgFixedStake','交易已提交...','info');await tx.wait();
     mg('msgFixedStake','定期质押成功!','ok');loadOV();loadFS();
   }catch(e){mg('msgFixedStake',e.reason||e.message,'err')}
+  finally{setLoading('btnFixedStake',false)}
 }
 
 async function claim(){
   if(!A)return alert('请先连接钱包');
+  setLoading('btnClaim',true);
   try{
     const c=S.connect(W);const tx=await c.claim();
     mg('msgClaim','交易已提交...','info');await tx.wait();
     mg('msgClaim','分红领取成功!','ok');loadOV();
   }catch(e){mg('msgClaim',e.reason||e.message,'err')}
+  finally{setLoading('btnClaim',false)}
 }
 
 async function loadFS(){
   const e=document.getElementById('fixedStakes');
   if(!A){e.innerHTML='<div class="no-data">请先连接钱包</div>';return}
+  e.innerHTML=skTable();
   try{
     const i=await S.getUserOverview(A);
     const cnt=i.fixedStakeCount.toNumber();
@@ -568,8 +649,7 @@ async function loadFS(){
       h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span><span style="font-size:12px">${r.redeemed?'<span style="color:var(--green)">已赎回</span>':'<span style="color:var(--accent2)">锁定中</span>'}</span></div>`;
     }
     e.innerHTML=h;
-  }catch(x){e.innerHTML='<div class="no-data">加载失败</div>'}
-  // 活期状态
+  }catch(x){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadFS();return false" style="color:var(--accent)">重试</a></div>'}
   const fs=document.getElementById('flexStatus');
   try{
     const famt=await S.flexStakeAmount(A);
@@ -585,14 +665,17 @@ async function fixedRedeem(){
   if(!A)return alert('请先连接钱包');
   const idx=document.getElementById('redeemIdx').value;
   if(!idx)return mg('msgFixedRedeem','请输入 idx','err');
+  setLoading('btnFixedRedeem',true);
   try{
     const c=S.connect(W);const tx=await c.fixedRedeem(idx);
     mg('msgFixedRedeem','交易已提交...','info');await tx.wait();
     mg('msgFixedRedeem','赎回成功!','ok');loadOV();loadFS();
   }catch(e){mg('msgFixedRedeem',e.reason||e.message,'err')}
+  finally{setLoading('btnFixedRedeem',false)}
 }
 
 async function loadReward(){
+  document.getElementById('leaderboard').innerHTML=skTable();
   try{
     const[rn,dt]=await R.currentRound();
     document.getElementById('roundNum').textContent='Round #'+rn.toString();
