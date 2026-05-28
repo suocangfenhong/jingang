@@ -60,12 +60,11 @@
   .cd-label{font-size:11px;color:var(--muted);text-transform:uppercase}
   .cd-sep{font-size:24px;color:var(--muted)}
   .round-num{font-size:28px;font-weight:800}
-  .fs-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px}
-  .fs-row .fs-id{color:var(--accent);font-weight:700;width:40px}
-  .fs-row .fs-amt{font-weight:600;flex:1;text-align:center}
-  .fs-row .fs-time{color:var(--muted);font-size:11px;width:130px;text-align:center}
-  .fs-row .fs-cd{font-size:12px;font-variant-numeric:tabular-nums;width:100px;text-align:center}
-  .fs-row .fs-op{width:60px;text-align:right}
+  .fs-row{display:flex;align-items:center;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px;gap:4px}
+  .fs-row .fs-amt{font-weight:600;flex:2;text-align:center;min-width:70px}
+  .fs-row .fs-time{color:var(--muted);font-size:11px;flex:3;text-align:center;min-width:120px}
+  .fs-row .fs-cd{font-size:12px;font-variant-numeric:tabular-nums;flex:2;text-align:center;min-width:80px}
+  .fs-row .fs-op{flex:1.5;text-align:right;min-width:50px}
   .no-data{text-align:center;color:var(--muted);padding:24px;font-size:14px}
   .msg{font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);margin-top:8px;display:none}
   .msg.ok{background:rgba(52,211,153,.1);color:var(--green)}
@@ -85,12 +84,11 @@
     .btn.sm{height:36px}
     .lb-table{font-size:11px;display:block;overflow-x:auto}
     .lb-table td,.lb-table th{padding:6px}
-    .fs-row{flex-wrap:wrap;gap:4px;font-size:12px;padding:8px 10px}
-    .fs-row .fs-id{width:32px;font-size:11px}
-    .fs-row .fs-amt{flex:1;min-width:60px;text-align:center;font-size:12px}
-    .fs-row .fs-time{width:auto;font-size:10px;text-align:left}
-    .fs-row .fs-cd{width:auto;font-size:11px;text-align:center}
-    .fs-row .fs-op{width:auto;text-align:right}
+    .fs-row{flex-wrap:nowrap;gap:2px;font-size:11px;padding:8px 6px;overflow-x:auto}
+    .fs-row .fs-amt{flex:2;min-width:55px;font-size:11px}
+    .fs-row .fs-time{flex:3;min-width:90px;font-size:9px}
+    .fs-row .fs-cd{flex:2;min-width:60px;font-size:10px}
+    .fs-row .fs-op{flex:1.5;min-width:44px}
     .countdown{gap:3px}
     .cd-sep{font-size:18px}
     .rule-item{flex-direction:column;gap:6px}
@@ -678,7 +676,7 @@ async function loadFS(){
     const cnt=i.fixedStakeCount.toNumber();
     if(cnt===0){e.innerHTML='<div class="no-data">暂无定期质押</div>';return}
     const[recs,ids]=await S.getFixedStakes(A,0,cnt);
-    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent;flex-wrap:nowrap;overflow-x:auto"><span class="fs-amt">质押数量</span><span class="fs-time">质押时间</span><span class="fs-cd">无损赎回</span><span class="fs-op">操作</span></div>';
+    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span class="fs-amt">质押数量</span><span class="fs-time">质押时间</span><span class="fs-cd">无损赎回</span><span class="fs-op">操作</span></div>';
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
       const d=new Date(r.stakeTime.toNumber()*1000).toLocaleString('zh-CN');
@@ -697,7 +695,7 @@ async function loadFS(){
       const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">赎回</button>`;
       h+=`<div class="fs-row"><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span><span class="fs-cd">${cd}</span><span class="fs-op">${redeemBtn}</span></div>`;
     }
-    e.innerHTML=h;
+    e.innerHTML='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+h+'</div>';
   }catch(x){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadFS();return false" style="color:var(--accent)">重试</a></div>'}
   const fs=document.getElementById('flexStatus');
   try{
