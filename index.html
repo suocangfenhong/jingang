@@ -677,7 +677,8 @@ async function loadFS(){
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
       const d=new Date(r.stakeTime.toNumber()*1000).toLocaleDateString('zh-CN');
-      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span><span style="font-size:12px">${r.redeemed?'<span style="color:var(--green)">已赎回</span>':'<span style="color:var(--accent2)">锁定中</span>'}</span></div>`;
+      const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">解押</button>`;
+      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span>${redeemBtn}</div>`;
     }
     e.innerHTML=h;
   }catch(x){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadFS();return false" style="color:var(--accent)">重试</a></div>'}
@@ -703,6 +704,15 @@ async function fixedRedeem(){
     mg('msgFixedRedeem','赎回成功!','ok');loadOV();loadFS();
   }catch(e){mg('msgFixedRedeem',e.reason||e.message,'err')}
   finally{setLoading('btnFixedRedeem',false)}
+}
+
+async function fixedRedeemByIdx(idx){
+  if(!A)return alert('请先连接钱包');
+  try{
+    const c=S.connect(W);const tx=await c.fixedRedeem(idx);
+    mg('msgFixedRedeem','交易已提交...','info');await tx.wait();
+    mg('msgFixedRedeem','解押成功!','ok');loadOV();loadFS();
+  }catch(e){mg('msgFixedRedeem',e.reason||e.message,'err')}
 }
 
 async function loadReward(){
