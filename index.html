@@ -676,7 +676,7 @@ async function loadFS(){
     let h='';
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
-      const d=new Date(r.stakeTime.toNumber()*1000).toLocaleDateString('zh-CN');
+      const d=new Date(r.stakeTime.toNumber()*1000).toLocaleString('zh-CN');
       const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">解押</button>`;
       h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span>${redeemBtn}</div>`;
     }
