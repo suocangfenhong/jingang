@@ -664,11 +664,11 @@ async function loadFS(){
     const cnt=i.fixedStakeCount.toNumber();
     if(cnt===0){e.innerHTML='<div class="no-data">暂无定期质押</div>';return}
     const[recs,ids]=await S.getFixedStakes(A,0,cnt);
-    let h='';
+    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span>ID</span><span>质押数量</span><span>质押时间</span><span>操作</span></div>';
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
       const d=new Date(r.stakeTime.toNumber()*1000).toLocaleString('zh-CN');
-      const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">解押</button>`;
+      const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">赎回</button>`;
       h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span>${redeemBtn}</div>`;
     }
     e.innerHTML=h;
