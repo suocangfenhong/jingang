@@ -678,7 +678,7 @@ async function loadFS(){
     const cnt=i.fixedStakeCount.toNumber();
     if(cnt===0){e.innerHTML='<div class="no-data">暂无定期质押</div>';return}
     const[recs,ids]=await S.getFixedStakes(A,0,cnt);
-    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span class="fs-amt">质押数量</span><span class="fs-time">质押时间</span><span class="fs-cd">无损赎回倒计时</span><span class="fs-op">操作</span></div>';
+    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent;flex-wrap:nowrap;overflow-x:auto"><span class="fs-amt">质押数量</span><span class="fs-time">质押时间</span><span class="fs-cd">无损赎回</span><span class="fs-op">操作</span></div>';
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
       const d=new Date(r.stakeTime.toNumber()*1000).toLocaleString('zh-CN');
