@@ -325,7 +325,7 @@ const RABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
 
 const E20 = ["function approve(address,uint256) returns (bool)","function allowance(address,address) view returns (uint256)","function balanceOf(address) view returns (uint256)","function decimals() view returns (uint8)","function symbol() view returns (string)"];
 
-let P, S, R, W, WP, A, KT, KD=18, MW=10, DT=0;
+let P, S, R, W, WP, A, KT, KD=18, MW=10, DT=0, LP=0;
 
 function fa(a){return(a||'').slice(0,6)+'...'+(a||'').slice(-4)}
 function fn(n,d){d=d||18;return Number(ethers.utils.formatUnits(n,d)).toFixed(2)}
@@ -363,6 +363,7 @@ async function init(){
     KT = kt;
     const k = new ethers.Contract(KT, E20, P);
     KD = await k.decimals();
+    LP = lp.toNumber();
     document.getElementById('kkTokenAddr').textContent = fa(KT);
     document.getElementById('minStake').textContent = fn(ms, KD) + ' 金刚';
     document.getElementById('lockPeriod').textContent = (lp.toNumber() / 86400).toFixed(0) + ' 天';
@@ -664,12 +665,24 @@ async function loadFS(){
     const cnt=i.fixedStakeCount.toNumber();
     if(cnt===0){e.innerHTML='<div class="no-data">暂无定期质押</div>';return}
     const[recs,ids]=await S.getFixedStakes(A,0,cnt);
-    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span>ID</span><span>质押数量</span><span>质押时间</span><span>操作</span></div>';
+    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span>ID</span><span>质押数量</span><span>质押时间</span><span>到期倒计时</span><span>操作</span></div>';
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
       const d=new Date(r.stakeTime.toNumber()*1000).toLocaleString('zh-CN');
+      let cd='';
+      if(!r.redeemed){
+        const unlockTime=r.stakeTime.toNumber()+LP;
+        const remain=Math.max(0,unlockTime-Math.floor(Date.now()/1000));
+        if(remain<=0)cd='<span style="color:var(--green);font-size:12px">已到期 ✅</span>';
+        else{
+          const dd=String(Math.floor(remain/86400)).padStart(2,'0');
+          const hh=String(Math.floor((remain%86400)/3600)).padStart(2,'0');
+          const mm=String(Math.floor((remain%3600)/60)).padStart(2,'0');
+          cd=`<span style="font-size:12px;font-variant-numeric:tabular-nums">${dd}天${hh}:${mm}</span>`;
+        }
+      }
       const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">赎回</button>`;
-      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span>${redeemBtn}</div>`;
+      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span>${cd}${redeemBtn}</div>`;
     }
     e.innerHTML=h;
   }catch(x){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadFS();return false" style="color:var(--accent)">重试</a></div>'}
