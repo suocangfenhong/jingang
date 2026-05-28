@@ -553,9 +553,11 @@ async function loadOV(){
     const tw=await S.totalStakedKK();
     const pct=tw.gt(0)?(Number(i.totalSS)/Number(tw)*100).toFixed(2):'0.00';
     const pr=fn(i.pendingReward,KD);
+    const fixedAmt=i.totalSS.sub(i.flexStake);
     document.getElementById('pendingReward').textContent=pr+' LP';
     e.innerHTML=`<div class="grid2">
       <div class="info-row"><span>活期质押</span><span class="val">${fn(i.flexStake,KD)} 金刚</span></div>
+      <div class="info-row"><span>定期质押</span><span class="val">${fn(fixedAmt,KD)} 金刚</span></div>
       <div class="info-row"><span>个人占比 (%)</span><span class="val">${pct}%</span></div>
       <div class="info-row"><span>待领分红</span><span class="val accent">${pr} LP</span></div>
       <div class="info-row"><span>已领分红</span><span class="val green">${fn(i.totalClaimedReward,KD)} LP</span></div>
