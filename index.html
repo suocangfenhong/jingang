@@ -61,9 +61,11 @@
   .cd-sep{font-size:24px;color:var(--muted)}
   .round-num{font-size:28px;font-weight:800}
   .fs-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px}
-  .fs-row .fs-id{color:var(--accent);font-weight:700}
-  .fs-row .fs-amt{font-weight:600}
-  .fs-row .fs-time{color:var(--muted);font-size:11px}
+  .fs-row .fs-id{color:var(--accent);font-weight:700;width:40px}
+  .fs-row .fs-amt{font-weight:600;flex:1;text-align:center}
+  .fs-row .fs-time{color:var(--muted);font-size:11px;width:130px;text-align:center}
+  .fs-row .fs-cd{font-size:12px;font-variant-numeric:tabular-nums;width:100px;text-align:center}
+  .fs-row .fs-op{width:60px;text-align:right}
   .no-data{text-align:center;color:var(--muted);padding:24px;font-size:14px}
   .msg{font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);margin-top:8px;display:none}
   .msg.ok{background:rgba(52,211,153,.1);color:var(--green)}
@@ -83,7 +85,12 @@
     .btn.sm{height:36px}
     .lb-table{font-size:11px;display:block;overflow-x:auto}
     .lb-table td,.lb-table th{padding:6px}
-    .fs-row{flex-wrap:wrap;gap:4px;font-size:12px}
+    .fs-row{flex-wrap:wrap;gap:4px;font-size:12px;padding:8px 10px}
+    .fs-row .fs-id{width:32px;font-size:11px}
+    .fs-row .fs-amt{flex:1;min-width:60px;text-align:center;font-size:12px}
+    .fs-row .fs-time{width:auto;font-size:10px;text-align:left}
+    .fs-row .fs-cd{width:auto;font-size:11px;text-align:center}
+    .fs-row .fs-op{width:auto;text-align:right}
     .countdown{gap:3px}
     .cd-sep{font-size:18px}
     .rule-item{flex-direction:column;gap:6px}
@@ -448,6 +455,12 @@ async function connectWalletFinalize(p) {
     WP = new ethers.providers.Web3Provider(p.provider);
     S = new ethers.Contract(SA, SABI, WP);
     R = new ethers.Contract(RA, RABI, WP);
+    // 手机端补取LP
+    if(!LP||!KT){
+      const[lpVal,ktVal]=await Promise.all([S.LOCK_PERIOD(),S.kkToken()]);
+      LP=lpVal.toNumber();
+      if(!KT){KT=ktVal;KD=await new ethers.Contract(KT,E20,WP).decimals()}
+    }
     updateUI(); loadOV(); loadFS();
     p.provider.on('accountsChanged', x => {
       if (!x.length) { A = null; W = null; activeProvider = null; updateUI(); loadOV(); loadFS(); }
@@ -665,7 +678,7 @@ async function loadFS(){
     const cnt=i.fixedStakeCount.toNumber();
     if(cnt===0){e.innerHTML='<div class="no-data">暂无定期质押</div>';return}
     const[recs,ids]=await S.getFixedStakes(A,0,cnt);
-    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span>ID</span><span>质押数量</span><span>质押时间</span><span>无损赎回倒计时</span><span>操作</span></div>';
+    let h='<div class="fs-row" style="color:var(--muted);font-size:11px;font-weight:600;background:transparent"><span class="fs-id">ID</span><span class="fs-amt">质押数量</span><span class="fs-time">质押时间</span><span class="fs-cd">无损赎回倒计时</span><span class="fs-op">操作</span></div>';
     for(let i=0;i<recs.length;i++){
       const r=recs[i];const id=ids[i].toString();
       const d=new Date(r.stakeTime.toNumber()*1000).toLocaleString('zh-CN');
@@ -673,16 +686,16 @@ async function loadFS(){
       if(!r.redeemed){
         const unlockTime=r.stakeTime.toNumber()+LP;
         const remain=Math.max(0,unlockTime-Math.floor(Date.now()/1000));
-        if(remain<=0)cd='<span style="color:var(--green);font-size:12px">已到期 ✅</span>';
+        if(remain<=0)cd='<span style="color:var(--green)">已到期 ✅</span>';
         else{
           const dd=String(Math.floor(remain/86400)).padStart(2,'0');
           const hh=String(Math.floor((remain%86400)/3600)).padStart(2,'0');
           const mm=String(Math.floor((remain%3600)/60)).padStart(2,'0');
-          cd=`<span style="font-size:12px;font-variant-numeric:tabular-nums">${dd}天${hh}:${mm}</span>`;
+          cd=`${dd}天${hh}:${mm}`;
         }
       }
       const redeemBtn=r.redeemed?'<span style="color:var(--green)">已赎回</span>':`<button class="btn sm" onclick="fixedRedeemByIdx('${id}')" style="padding:4px 10px;font-size:11px;width:auto;margin:0;height:28px">赎回</button>`;
-      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span>${cd}${redeemBtn}</div>`;
+      h+=`<div class="fs-row"><span class="fs-id">#${id}</span><span class="fs-amt">${fn(r.amount,KD)} 金刚</span><span class="fs-time">${d}</span><span class="fs-cd">${cd}</span><span class="fs-op">${redeemBtn}</span></div>`;
     }
     e.innerHTML=h;
   }catch(x){e.innerHTML='<div class="no-data">加载失败 <a href="#" onclick="loadFS();return false" style="color:var(--accent)">重试</a></div>'}
