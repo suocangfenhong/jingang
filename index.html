@@ -383,8 +383,8 @@ async function init(){
     document.getElementById('totalStaked').textContent = fn(tw, KD) + ' 金刚';
     MW = mw.toNumber();
     loadReward();
-    setInterval(loadReward, 90000);
-    setInterval(updateCD, 1000);
+    if(!window._rwInterval)window._rwInterval=setInterval(loadReward,90000);
+    if(!window._cdInterval)window._cdInterval=setInterval(updateCD,1000);
   } catch(e) {
     console.error(e);
     document.getElementById('overview').innerHTML = '<div class="no-data" style="color:var(--red)">加载合约数据失败</div>';
@@ -467,7 +467,9 @@ async function connectWalletFinalize(p) {
       LP=lpVal.toNumber();
       if(!KT){KT=ktVal;KD=await new ethers.Contract(KT,E20,WP).decimals()}
     }
-    updateUI(); loadOV(); loadFS();
+    updateUI(); loadOV(); loadFS(); loadReward();
+    if(!window._cdInterval){window._cdInterval=setInterval(updateCD,1000)}
+    if(!window._rwInterval){window._rwInterval=setInterval(loadReward,90000)}
     p.provider.on('accountsChanged', x => {
       if (!x.length) { A = null; W = null; activeProvider = null; updateUI(); loadOV(); loadFS(); }
       else { A = x[0]; updateUI(); loadOV(); loadFS(); }
